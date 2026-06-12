@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// One-time bootstrap endpoint: creates the very first administrator account.
-// It self-disables permanently once any admin exists.
+// One-time bootstrap endpoint: seeds the FUSAS administrator accounts.
+// It self-disables permanently once at least two admins exist.
+const ADMINS = [
+  { email: "fusas8@gmail.com", password: "Fusas2026", fullName: "Administrador FUSAS" },
+  { email: "fusasescuela@gmail.com", password: "Fusas2026", fullName: "Paola" },
+];
+
 export const Route = createFileRoute("/api/public/bootstrap")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
+      POST: async () => {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         const { count, error: cErr } = await supabaseAdmin
@@ -13,36 +18,31 @@ export const Route = createFileRoute("/api/public/bootstrap")({
           .select("id", { count: "exact", head: true })
           .eq("role", "admin");
         if (cErr) return Response.json({ error: cErr.message }, { status: 500 });
-        if ((count ?? 0) > 0) {
-          return Response.json({ error: "Ya existe un administrador." }, { status: 409 });
+        if ((count ?? 0) >= ADMINS.length) {
+          return Response.json({ error: "Los administradores ya existen." }, { status: 409 });
         }
 
-        let body: { email?: string; password?: string; fullName?: string };
-        try {
-          body = (await request.json()) as typeof body;
-        } catch {
-          return Response.json({ error: "Cuerpo inválido" }, { status: 400 });
+        const results: { email: string; ok: boolean; error?: string }[] = [];
+        for (const a of ADMINS) {
+          const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+            email: a.email,
+            password: a.password,
+            email_confirm: true,
+            user_metadata: { full_name: a.fullName },
+          });
+          if (error || !created.user) {
+            results.push({ email: a.email, ok: false, error: error?.message });
+            continue;
+          }
+          const uid = created.user.id;
+          await supabaseAdmin.from("profiles").upsert({ id: uid, full_name: a.fullName, email: a.email });
+          await supabaseAdmin.from("user_roles").upsert(
+            { user_id: uid, role: "admin" },
+            { onConflict: "user_id,role" },
+          );
+          results.push({ email: a.email, ok: true });
         }
-        const email = (body.email ?? "").trim();
-        const password = body.password ?? "";
-        const fullName = (body.fullName ?? "Administrador").trim();
-        if (!email || password.length < 6) {
-          return Response.json({ error: "Email y contraseña (>=6) requeridos" }, { status: 400 });
-        }
-
-        const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
-          email, password, email_confirm: true, user_metadata: { full_name: fullName },
-        });
-        if (error || !created.user) {
-          return Response.json({ error: error?.message || "Error" }, { status: 500 });
-        }
-        const uid = created.user.id;
-        await supabaseAdmin.from("profiles").upsert({ id: uid, full_name: fullName, email });
-        await supabaseAdmin.from("user_roles").upsert(
-          { user_id: uid, role: "admin" },
-          { onConflict: "user_id,role" },
-        );
-        return Response.json({ ok: true, id: uid });
+        return Response.json({ ok: true, results });
       },
     },
   },
