@@ -1,10 +1,11 @@
 import { type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Music, LogOut, LibraryBig, Upload, Settings } from "lucide-react";
+import { LogOut, LibraryBig, Upload, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import fusasLogo from "@/assets/fusas-logo.png.asset.json";
 
 function roleLabel(roles: string[]) {
   if (roles.includes("admin")) return "Administrador";
@@ -30,11 +31,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
           <Link to="/biblioteca" className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <Music className="h-5 w-5" />
-            </span>
+            <img src={fusasLogo.url} alt="FUSAS" className="h-7 w-auto" />
             <span className="font-display text-lg font-bold leading-none">
-              Biblioteca <span className="text-primary">FUSAS</span>
+              Biblioteca
             </span>
           </Link>
 

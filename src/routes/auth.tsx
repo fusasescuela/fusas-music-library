@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Music } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import fusasLogoWhite from "@/assets/fusas-logo-white.png.asset.json";
+import fusasLogo from "@/assets/fusas-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -49,10 +50,8 @@ function AuthPage() {
         style={{ background: "var(--gradient-hero)" }}
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-            <Music className="h-6 w-6" />
-          </span>
-          <span className="font-display text-xl font-bold">Biblioteca FUSAS</span>
+          <img src={fusasLogoWhite.url} alt="FUSAS" className="h-9 w-auto" />
+          <span className="font-display text-xl font-bold">Biblioteca</span>
         </div>
         <div>
           <h1 className="font-display text-4xl font-extrabold leading-tight">
@@ -68,9 +67,7 @@ function AuthPage() {
       <div className="flex items-center justify-center p-6">
         <form onSubmit={onSubmit} className="w-full max-w-sm space-y-6">
           <div className="lg:hidden">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-              <Music className="h-6 w-6" />
-            </span>
+            <img src={fusasLogo.url} alt="FUSAS" className="h-9 w-auto" />
           </div>
           <div>
             <h2 className="font-display text-2xl font-bold">Iniciar sesión</h2>

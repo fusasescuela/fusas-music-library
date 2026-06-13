@@ -7,7 +7,7 @@ export const Route = createFileRoute("/")({
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Music } from "lucide-react";
+import fusasLogo from "@/assets/fusas-logo.png.asset.json";
 
 function Index() {
   const navigate = useNavigate();
@@ -20,9 +20,7 @@ function Index() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-3 text-muted-foreground">
-        <span className="flex h-12 w-12 animate-pulse items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-          <Music className="h-6 w-6" />
-        </span>
+        <img src={fusasLogo.url} alt="FUSAS" className="h-10 w-auto animate-pulse" />
         <p className="text-sm">Cargando Biblioteca FUSAS…</p>
       </div>
     </div>
