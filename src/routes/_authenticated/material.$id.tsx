@@ -141,11 +141,24 @@ function MaterialDetail() {
           </div>
         )}
         {m.type === "link" && m.external_url && (
-          <a href={m.external_url} target="_blank" rel="noopener noreferrer">
-            <Button className="gap-2">
-              <ExternalLink className="h-4 w-4" /> Abrir enlace externo
-            </Button>
-          </a>
+          <div className="space-y-4">
+            {embedUrl && (
+              <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
+                <iframe
+                  src={embedUrl}
+                  title={m.title}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )}
+            <a href={m.external_url} target="_blank" rel="noopener noreferrer">
+              <Button variant={embedUrl ? "outline" : "default"} className="gap-2">
+                <ExternalLink className="h-4 w-4" /> Abrir enlace externo
+              </Button>
+            </a>
+          </div>
         )}
         {m.type === "text" && (
           <div className="prose prose-sm max-w-none">
