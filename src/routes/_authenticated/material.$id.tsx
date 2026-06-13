@@ -12,6 +12,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
+function getEmbedUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      const id = u.searchParams.get("v");
+      if (id) return `https://www.youtube-nocookie.com/embed/${id}`;
+    }
+    if (host === "youtu.be") {
+      const id = u.pathname.slice(1);
+      if (id) return `https://www.youtube-nocookie.com/embed/${id}`;
+    }
+    if (host === "vimeo.com") {
+      const id = u.pathname.split("/").filter(Boolean)[0];
+      if (id) return `https://player.vimeo.com/video/${id}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/_authenticated/material/$id")({
   component: MaterialDetail,
   errorComponent: () => (
@@ -52,6 +75,8 @@ function MaterialDetail() {
     name("subjects", m.subject_id),
     name("teachers", m.teacher_id),
   ].filter(Boolean) as string[];
+
+  const embedUrl = m.type === "link" ? getEmbedUrl(m.external_url) : null;
 
   async function openFile() {
     setOpening(true);
@@ -116,11 +141,24 @@ function MaterialDetail() {
           </div>
         )}
         {m.type === "link" && m.external_url && (
-          <a href={m.external_url} target="_blank" rel="noopener noreferrer">
-            <Button className="gap-2">
-              <ExternalLink className="h-4 w-4" /> Abrir enlace externo
-            </Button>
-          </a>
+          <div className="space-y-4">
+            {embedUrl && (
+              <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
+                <iframe
+                  src={embedUrl}
+                  title={m.title}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )}
+            <a href={m.external_url} target="_blank" rel="noopener noreferrer">
+              <Button variant={embedUrl ? "outline" : "default"} className="gap-2">
+                <ExternalLink className="h-4 w-4" /> Abrir enlace externo
+              </Button>
+            </a>
+          </div>
         )}
         {m.type === "text" && (
           <div className="prose prose-sm max-w-none">
