@@ -53,6 +53,8 @@ function MaterialDetail() {
     name("teachers", m.teacher_id),
   ].filter(Boolean) as string[];
 
+  const embedUrl = m.type === "link" ? getEmbedUrl(m.external_url) : null;
+
   async function openFile() {
     setOpening(true);
     try {
