@@ -53,6 +53,56 @@ export type Database = {
         }
         Relationships: []
       }
+      material_attachments: {
+        Row: {
+          body_text: string | null
+          created_at: string
+          external_url: string | null
+          file_mime: string | null
+          file_name: string | null
+          file_path: string | null
+          id: string
+          kind: Database["public"]["Enums"]["attachment_kind"]
+          material_id: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          body_text?: string | null
+          created_at?: string
+          external_url?: string | null
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["attachment_kind"]
+          material_id: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          body_text?: string | null
+          created_at?: string
+          external_url?: string | null
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["attachment_kind"]
+          material_id?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_attachments_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       materials: {
         Row: {
           body_text: string | null
@@ -305,6 +355,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "docente" | "estudiante"
+      attachment_kind: "file" | "link" | "text"
       material_type: "file" | "link" | "text"
     }
     CompositeTypes: {
@@ -434,6 +485,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "docente", "estudiante"],
+      attachment_kind: ["file", "link", "text"],
       material_type: ["file", "link", "text"],
     },
   },
