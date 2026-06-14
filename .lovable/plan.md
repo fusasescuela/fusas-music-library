@@ -1,66 +1,63 @@
-## Biblioteca FUSAS — Escuela de Música
+## Objetivo
 
-App web para gestionar y compartir materiales de estudio, con login por roles y control de acceso seguro mediante Lovable Cloud (Supabase).
+Hoy cada material (tarjeta) admite **un solo** tipo de contenido: archivo, enlace/video o nota. El objetivo es que en una misma tarjeta se puedan subir y visualizar **varios elementos a la vez** (por ejemplo: un PDF + una nota + un video), sin que sean excluyentes.
 
-### Roles y permisos
-- **Admin**: gestiona todo (CRUD de instrumentos, niveles, materias, profesores, materiales) y crea/edita cuentas de usuario asignándoles rol, instrumentos, niveles y profesores.
-- **Docente**: sube, edita y elimina sus propios materiales; ve sus asignaciones.
-- **Estudiante**: solo ve los materiales que le corresponden (según sus instrumentos/niveles/profesores asignados) más una sección de **contenido general** visible para todos.
+## Enfoque
 
-Las cuentas las crea únicamente el admin (no hay auto-registro).
+Convertir el material en un "contenedor" (título, descripción, clasificación, visibilidad) y mover el contenido a una tabla nueva de **adjuntos**, donde cada material puede tener varios. Así se pueden combinar libremente archivos, enlaces/videos y notas, e incluso varios del mismo tipo.
 
-### Tipos de material
-Cada material puede ser **archivo** (PDF, partitura, audio, video — subido a almacenamiento), **enlace externo** (YouTube, Drive, etc.) o **texto/nota**. Se clasifica por instrumento, nivel, materia, profesor y tipo de contenido. Un material puede marcarse como "general" (visible para todos).
+## 1. Base de datos
 
-### Estilo visual
-Dirección **Vibrante creativo**: fondo oscuro morado (#1e1b2e), acento violeta (#8b5cf6) y coral (#fb7185), superficies claras (#fef3f2). Moderno, limpio y fácil de navegar, pensado para una escuela de música. Tipografía display distintiva + cuerpo legible.
-
----
-
-### Modelo de datos (Supabase)
+Nueva tabla `material_attachments`:
 
 ```text
-profiles        (id→auth.users, full_name, email, created_at)
-user_roles      (user_id, role)  -- enum: admin, docente, estudiante
-instruments     (id, name)
-levels          (id, name, sort_order)
-subjects        (id, name)        -- materias
-teachers        (id, profile_id?, name, instrument_id?)  -- profesores
-materials       (id, title, description, type[file|link|text],
-                 file_path?, file_mime?, external_url?, body_text?,
-                 instrument_id?, level_id?, subject_id?, teacher_id?,
-                 is_general bool, owner_id→auth.users, created_at)
-student_assignments (id, student_id→auth.users, instrument_id, level_id, teacher_id)
+id            uuid (PK)
+material_id   uuid  -> materials.id (on delete cascade)
+kind          'file' | 'link' | 'text'
+file_path     text   (solo file)
+file_mime     text   (solo file)
+file_name     text   (solo file)
+external_url  text   (solo link/video)
+body_text     text   (solo text)
+position      int    (orden dentro de la tarjeta)
+created_at / updated_at
 ```
 
-`student_assignments` permite **varios** instrumentos/niveles/profesores por estudiante. Bucket de storage privado `materials` para archivos.
+- GRANTs estándar + RLS:
+  - **Ver**: si el usuario puede ver el material padre (misma lógica: docentes/admin ven todo; estudiantes ven generales o asignados).
+  - **Gestionar**: admin, o docente dueño del material padre.
+- Migración de datos: por cada material existente, crear un adjunto a partir de su `type`/`file_path`/`external_url`/`body_text` actuales, para no perder nada.
+- Se conservan las columnas actuales de `materials` (no se borran) para evitar romper nada; el contenido pasa a leerse desde los adjuntos.
 
-### Seguridad (RLS)
-- `user_roles` con función `has_role()` (security definer) para evitar recursión; roles NUNCA en profiles.
-- `materials` SELECT:
-  - admin/docente: todo (docente edita solo `owner_id = auth.uid()`).
-  - estudiante: `is_general = true` **OR** el material coincide con alguna fila de sus `student_assignments` (instrumento/nivel/profesor) — vía función security definer.
-- Catálogos (instruments/levels/subjects/teachers): lectura autenticada; escritura solo admin.
-- Storage `materials`: acceso a archivos validado por permiso sobre el material asociado.
+## 2. Formulario de subida (`subir.tsx`)
 
-### Pantallas
-1. **Login** (`/auth`) — email/contraseña.
-2. **Biblioteca** (home) — grid de materiales con filtros por instrumento, nivel, materia, profesor, tipo; sección "Contenido general" destacada. Cada uno respeta los permisos del usuario.
-3. **Detalle de material** — visor/descarga de archivo, embed de enlace, o texto.
-4. **Subir/editar material** (docente y admin) — formulario con tipo, archivo/enlace/texto y clasificación.
-5. **Panel admin** — gestión de catálogos (instrumentos, niveles, materias, profesores), usuarios (crear cuenta, asignar rol y asignaciones de estudiante), y todos los materiales.
+- Reemplazar las pestañas excluyentes por **secciones acumulables**:
+  - Archivos: poder adjuntar uno o varios archivos.
+  - Enlaces / videos: agregar uno o varios enlaces (YouTube, Vimeo, etc.).
+  - Notas: agregar uno o varios bloques de texto.
+- Cada elemento agregado se puede quitar antes de guardar.
+- Al guardar: subir los archivos nuevos al storage e insertar/actualizar las filas en `material_attachments`. La clasificación (instrumento, nivel, materia, profesor, general) sigue igual a nivel material.
+- En edición: cargar los adjuntos existentes y permitir agregar/quitar.
 
-### Implementación técnica
-- TanStack Start + Lovable Cloud. Rutas protegidas bajo `_authenticated/`; `/auth` pública.
-- Server functions con `requireSupabaseAuth` para lecturas/escrituras; admin (crear usuarios) vía server function privilegiada que verifica `has_role(admin)`.
-- Creación de cuentas por admin usando Auth Admin API (service role) en server function protegida.
-- Subida de archivos al bucket privado con URLs firmadas para visualización/descarga.
-- Datos semilla mínimos (algunos instrumentos/niveles) vía migración.
+## 3. Vista de detalle (`material.$id.tsx`)
 
-### Orden de construcción
-1. Habilitar Lovable Cloud + esquema (tablas, enum, `has_role`, RLS, grants, bucket).
-2. Auth + layout protegido + roles en contexto.
-3. Biblioteca con filtros y permisos por rol.
-4. Subida/edición de materiales (archivo/enlace/texto).
-5. Panel admin (catálogos + usuarios + asignaciones).
-6. Pulido visual con la paleta vibrante.
+- Renderizar **todos** los adjuntos del material, cada uno en su propio bloque dentro de la Card:
+  - file → nombre + botón "Abrir" (URL firmada).
+  - link/video → reproductor embebido (YouTube/Vimeo, lógica `getEmbedUrl` ya existente) + botón de enlace externo.
+  - text → nota con formato.
+
+## 4. Tarjeta de biblioteca (`biblioteca.tsx`)
+
+- En cada `MaterialCard`, mostrar pequeños íconos indicando qué tipos de contenido incluye (p. ej. 📄 + 🔗 + 📝).
+- Mantener el filtro por tipo, ahora basado en "el material contiene algún adjunto de ese tipo".
+
+## 5. Función de URL firmada (`materials.functions.ts`)
+
+- Cambiar `getMaterialSignedUrl` para recibir un `attachmentId` (o material + path) y validar el acceso vía RLS del material padre antes de firmar la URL del archivo correspondiente.
+
+## Detalles técnicos
+
+- Subida múltiple de archivos al bucket privado `materials` (ya existe), con rutas `userId/timestamp-nombre`.
+- Validación con zod por cada adjunto (enlace válido, nota no vacía, archivo presente).
+- Invalidar queries `["materials"]` y `["material", id]` tras guardar.
+- El tipo `MATERIAL_TYPE_LABELS` se reutiliza para etiquetar cada adjunto.

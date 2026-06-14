@@ -5,12 +5,15 @@ import { useState } from "react";
 import { ArrowLeft, Download, ExternalLink, FileText, StickyNote, Sparkles, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getMaterialSignedUrl } from "@/lib/materials.functions";
-import { useCatalogs, MATERIAL_TYPE_LABELS } from "@/lib/catalogs";
+import type { Tables } from "@/integrations/supabase/types";
+import { getAttachmentSignedUrl } from "@/lib/materials.functions";
+import { useCatalogs } from "@/lib/catalogs";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+
+type Attachment = Tables<"material_attachments">;
 
 function getEmbedUrl(url: string | null): string | null {
   if (!url) return null;
@@ -48,8 +51,8 @@ function MaterialDetail() {
   const router = useRouter();
   const { data: catalogs } = useCatalogs();
   const { isStaff } = useAuth();
-  const getUrl = useServerFn(getMaterialSignedUrl);
-  const [opening, setOpening] = useState(false);
+  const getUrl = useServerFn(getAttachmentSignedUrl);
+  const [opening, setOpening] = useState<string | null>(null);
 
   const { data: m, isLoading } = useQuery({
     queryKey: ["material", id],
@@ -57,6 +60,19 @@ function MaterialDetail() {
       const { data, error } = await supabase.from("materials").select("*").eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: attachments } = useQuery({
+    queryKey: ["material-attachments", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("material_attachments")
+        .select("*")
+        .eq("material_id", id)
+        .order("position", { ascending: true });
+      if (error) throw error;
+      return data as Attachment[];
     },
   });
 
@@ -76,17 +92,15 @@ function MaterialDetail() {
     name("teachers", m.teacher_id),
   ].filter(Boolean) as string[];
 
-  const embedUrl = m.type === "link" ? getEmbedUrl(m.external_url) : null;
-
-  async function openFile() {
-    setOpening(true);
+  async function openFile(attachmentId: string) {
+    setOpening(attachmentId);
     try {
-      const res = await getUrl({ data: { materialId: id } });
+      const res = await getUrl({ data: { attachmentId } });
       window.open(res.url, "_blank", "noopener");
     } catch {
       toast.error("No se pudo abrir el archivo.");
     } finally {
-      setOpening(false);
+      setOpening(null);
     }
   }
 
@@ -107,7 +121,6 @@ function MaterialDetail() {
 
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{MATERIAL_TYPE_LABELS[m.type]}</Badge>
           {m.is_general && (
             <Badge variant="secondary" className="gap-1">
               <Sparkles className="h-3 w-3" /> General
@@ -125,54 +138,83 @@ function MaterialDetail() {
         )}
       </div>
 
-      <Card className="p-6">
-        {m.type === "file" && (
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <FileText className="h-8 w-8 text-primary" />
-              <div>
-                <p className="font-medium">{m.file_name || "Archivo adjunto"}</p>
-                <p className="text-sm text-muted-foreground">{m.file_mime || ""}</p>
-              </div>
-            </div>
-            <Button onClick={openFile} disabled={opening} className="gap-2">
-              <Download className="h-4 w-4" /> {opening ? "Abriendo…" : "Abrir"}
-            </Button>
-          </div>
+      <div className="space-y-4">
+        {(attachments ?? []).length === 0 && (
+          <Card className="p-6 text-muted-foreground">Este material no tiene contenido todavía.</Card>
         )}
-        {m.type === "link" && m.external_url && (
-          <div className="space-y-4">
-            {embedUrl && (
-              <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                <iframe
-                  src={embedUrl}
-                  title={m.title}
-                  className="h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            )}
-            <a href={m.external_url} target="_blank" rel="noopener noreferrer">
-              <Button variant={embedUrl ? "outline" : "default"} className="gap-2">
-                <ExternalLink className="h-4 w-4" /> Abrir enlace externo
-              </Button>
-            </a>
-          </div>
-        )}
-        {m.type === "text" && (
-          <div className="prose prose-sm max-w-none">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <StickyNote className="h-4 w-4" /> Nota
-            </div>
-            <p className="mt-3 whitespace-pre-wrap text-foreground">{m.body_text}</p>
-          </div>
-        )}
-      </Card>
+        {(attachments ?? []).map((a) => (
+          <AttachmentBlock
+            key={a.id}
+            a={a}
+            title={m.title}
+            opening={opening === a.id}
+            onOpen={() => openFile(a.id)}
+          />
+        ))}
+      </div>
 
       <Link to="/biblioteca" className="text-sm text-primary hover:underline">
         ← Volver a la biblioteca
       </Link>
     </div>
   );
+}
+
+function AttachmentBlock({
+  a, title, opening, onOpen,
+}: { a: Attachment; title: string; opening: boolean; onOpen: () => void }) {
+  if (a.kind === "file") {
+    return (
+      <Card className="p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <FileText className="h-8 w-8 text-primary" />
+            <div>
+              <p className="font-medium">{a.file_name || "Archivo adjunto"}</p>
+              <p className="text-sm text-muted-foreground">{a.file_mime || ""}</p>
+            </div>
+          </div>
+          <Button onClick={onOpen} disabled={opening} className="gap-2">
+            <Download className="h-4 w-4" /> {opening ? "Abriendo…" : "Abrir"}
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+  if (a.kind === "link" && a.external_url) {
+    const embedUrl = getEmbedUrl(a.external_url);
+    return (
+      <Card className="space-y-4 p-6">
+        {embedUrl && (
+          <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
+            <iframe
+              src={embedUrl}
+              title={title}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        )}
+        <a href={a.external_url} target="_blank" rel="noopener noreferrer">
+          <Button variant={embedUrl ? "outline" : "default"} className="gap-2">
+            <ExternalLink className="h-4 w-4" /> Abrir enlace externo
+          </Button>
+        </a>
+      </Card>
+    );
+  }
+  if (a.kind === "text") {
+    return (
+      <Card className="p-6">
+        <div className="prose prose-sm max-w-none">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <StickyNote className="h-4 w-4" /> Nota
+          </div>
+          <p className="mt-3 whitespace-pre-wrap text-foreground">{a.body_text}</p>
+        </div>
+      </Card>
+    );
+  }
+  return null;
 }
