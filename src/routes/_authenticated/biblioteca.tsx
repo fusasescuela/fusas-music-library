@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, LinkIcon, StickyNote, Sparkles, Search, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useCatalogs, MATERIAL_TYPE_LABELS } from "@/lib/catalogs";
+import { useCatalogs } from "@/lib/catalogs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,15 +30,16 @@ interface MaterialRow {
   subject_id: string | null;
   teacher_id: string | null;
   created_at: string;
+  kinds: ("file" | "link" | "text")[];
 }
 
 const ALL = "all";
 
-function typeIcon(type: string) {
-  if (type === "file") return <FileText className="h-4 w-4" />;
-  if (type === "link") return <LinkIcon className="h-4 w-4" />;
-  return <StickyNote className="h-4 w-4" />;
-}
+const KIND_META: Record<string, { label: string; Icon: typeof FileText }> = {
+  file: { label: "Archivo", Icon: FileText },
+  link: { label: "Enlace/Video", Icon: LinkIcon },
+  text: { label: "Nota", Icon: StickyNote },
+};
 
 function MaterialCard({ m, lookup }: { m: MaterialRow; lookup: (k: keyof MaterialRow, id: string | null) => string | null }) {
   const tags = [
@@ -48,12 +49,19 @@ function MaterialCard({ m, lookup }: { m: MaterialRow; lookup: (k: keyof Materia
     lookup("teacher_id", m.teacher_id),
   ].filter(Boolean) as string[];
 
+  const kinds = m.kinds.length > 0 ? m.kinds : [m.type];
+
   return (
     <Link to="/material/$id" params={{ id: m.id }}>
       <Card className="group h-full p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg">
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-xs font-medium text-primary">
-            {typeIcon(m.type)} {MATERIAL_TYPE_LABELS[m.type]}
+          <span className="flex items-center gap-2 text-xs font-medium text-primary">
+            {kinds.map((k) => {
+              const meta = KIND_META[k];
+              if (!meta) return null;
+              const { Icon, label } = meta;
+              return <span key={k} className="flex items-center gap-1" title={label}><Icon className="h-4 w-4" /></span>;
+            })}
           </span>
           {m.is_general && (
             <Badge variant="secondary" className="gap-1">
@@ -94,10 +102,16 @@ function BibliotecaPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("materials")
-        .select("id, title, description, type, is_general, instrument_id, level_id, subject_id, teacher_id, created_at")
+        .select("id, title, description, type, is_general, instrument_id, level_id, subject_id, teacher_id, created_at, material_attachments(kind)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as MaterialRow[];
+      return (data ?? []).map((row) => {
+        const { material_attachments, ...rest } = row as typeof row & {
+          material_attachments: { kind: "file" | "link" | "text" }[];
+        };
+        const kinds = Array.from(new Set((material_attachments ?? []).map((a) => a.kind)));
+        return { ...rest, kinds } as MaterialRow;
+      });
     },
   });
 
@@ -115,7 +129,10 @@ function BibliotecaPage() {
     if (instrument !== ALL && m.instrument_id !== instrument) return false;
     if (level !== ALL && m.level_id !== level) return false;
     if (subject !== ALL && m.subject_id !== subject) return false;
-    if (type !== ALL && m.type !== type) return false;
+    if (type !== ALL) {
+      const kinds = m.kinds.length > 0 ? m.kinds : [m.type];
+      if (!kinds.includes(type as "file" | "link" | "text")) return false;
+    }
     if (search && !`${m.title} ${m.description ?? ""}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
