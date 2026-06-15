@@ -57,3 +57,33 @@ export const deleteAppUser = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const updateRolesSchema = z.object({
+  userId: z.string().uuid(),
+  roles: z.array(z.enum(["admin", "docente", "estudiante"])).min(1),
+});
+
+export const updateUserRoles = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => updateRolesSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    if (data.userId === context.userId && !data.roles.includes("admin")) {
+      throw new Error("No puedes quitarte tu propio rol de administrador");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { error: delErr } = await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", data.userId);
+    if (delErr) throw new Error(delErr.message);
+
+    const rows = data.roles.map((role) => ({ user_id: data.userId, role }));
+    const { error: insErr } = await supabaseAdmin
+      .from("user_roles")
+      .upsert(rows, { onConflict: "user_id,role" });
+    if (insErr) throw new Error(insErr.message);
+
+    return { ok: true };
+  });
