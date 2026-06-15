@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2, GraduationCap, UserPlus, X } from "lucide-react";
+import { Plus, Trash2, GraduationCap, UserPlus, X, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createAppUser, deleteAppUser } from "@/lib/admin.functions";
+import { createAppUser, deleteAppUser, updateUserRoles } from "@/lib/admin.functions";
 import { useCatalogs } from "@/lib/catalogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
@@ -32,6 +33,8 @@ const ROLE_LABELS: Record<string, string> = {
   docente: "Docente",
   estudiante: "Estudiante",
 };
+
+const ALL_ROLES: ("admin" | "docente" | "estudiante")[] = ["admin", "docente", "estudiante"];
 
 export function UserManager() {
   const queryClient = useQueryClient();
@@ -138,6 +141,7 @@ export function UserManager() {
             </div>
             <div className="flex items-center gap-2">
               {u.roles.map((r) => <Badge key={r} variant="secondary">{ROLE_LABELS[r] ?? r}</Badge>)}
+              <RolesDialog userId={u.id} name={u.full_name} currentRoles={u.roles} />
               {u.roles.includes("estudiante") && <AssignmentsDialog studentId={u.id} name={u.full_name} />}
               <Button size="icon" variant="ghost" onClick={() => onDelete(u.id)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -147,6 +151,65 @@ export function UserManager() {
         ))}
       </Card>
     </div>
+  );
+}
+
+function RolesDialog({
+  userId, name, currentRoles,
+}: { userId: string; name: string; currentRoles: string[] }) {
+  const queryClient = useQueryClient();
+  const updateRoles = useServerFn(updateUserRoles);
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>(currentRoles);
+  const [saving, setSaving] = useState(false);
+
+  function toggle(role: string, checked: boolean) {
+    setSelected((prev) => (checked ? [...new Set([...prev, role])] : prev.filter((r) => r !== role)));
+  }
+
+  async function save() {
+    if (selected.length === 0) {
+      toast.error("Selecciona al menos un rol.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateRoles({ data: { userId, roles: selected as ("admin" | "docente" | "estudiante")[] } });
+      toast.success("Roles actualizados.");
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudieron actualizar los roles.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setSelected(currentRoles); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1.5">
+          <Shield className="h-4 w-4" /> Roles
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Roles de {name || "usuario"}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          {ALL_ROLES.map((role) => (
+            <label key={role} className="flex items-center gap-3 rounded-lg border border-border p-3 cursor-pointer">
+              <Checkbox
+                checked={selected.includes(role)}
+                onCheckedChange={(c) => toggle(role, Boolean(c))}
+              />
+              <span className="font-medium">{ROLE_LABELS[role]}</span>
+            </label>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button onClick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar roles"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
