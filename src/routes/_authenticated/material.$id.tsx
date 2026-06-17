@@ -95,8 +95,28 @@ function MaterialDetail() {
   async function openFile(attachmentId: string) {
     setOpening(attachmentId);
     try {
-      const res = await getUrl({ data: { attachmentId } });
-      window.open(res.url, "_blank", "noopener");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("no-session");
+
+      const res = await fetch(`/api/attachment/${attachmentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("download-failed");
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("content-disposition") || "";
+      const match = disposition.match(/filename="?([^"]+)"?/i);
+      const fileName = match ? decodeURIComponent(match[1]) : "archivo";
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch {
       toast.error("No se pudo abrir el archivo.");
     } finally {

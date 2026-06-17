@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSubirRouteImport } from './routes/_authenticated/subir'
 import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authenticated/biblioteca'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as ApiAttachmentIdRouteImport } from './routes/api/attachment.$id'
 import { Route as AuthenticatedMaterialIdRouteImport } from './routes/_authenticated/material.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -46,6 +47,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiAttachmentIdRoute = ApiAttachmentIdRouteImport.update({
+  id: '/api/attachment/$id',
+  path: '/api/attachment/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedMaterialIdRoute = AuthenticatedMaterialIdRouteImport.update({
   id: '/material/$id',
   path: '/material/$id',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/subir': typeof AuthenticatedSubirRoute
   '/material/$id': typeof AuthenticatedMaterialIdRoute
+  '/api/attachment/$id': typeof ApiAttachmentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/subir': typeof AuthenticatedSubirRoute
   '/material/$id': typeof AuthenticatedMaterialIdRoute
+  '/api/attachment/$id': typeof ApiAttachmentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/_authenticated/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/_authenticated/subir': typeof AuthenticatedSubirRoute
   '/_authenticated/material/$id': typeof AuthenticatedMaterialIdRoute
+  '/api/attachment/$id': typeof ApiAttachmentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,8 +96,16 @@ export interface FileRouteTypes {
     | '/biblioteca'
     | '/subir'
     | '/material/$id'
+    | '/api/attachment/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/admin' | '/biblioteca' | '/subir' | '/material/$id'
+  to:
+    | '/'
+    | '/auth'
+    | '/admin'
+    | '/biblioteca'
+    | '/subir'
+    | '/material/$id'
+    | '/api/attachment/$id'
   id:
     | '__root__'
     | '/'
@@ -98,12 +115,14 @@ export interface FileRouteTypes {
     | '/_authenticated/biblioteca'
     | '/_authenticated/subir'
     | '/_authenticated/material/$id'
+    | '/api/attachment/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiAttachmentIdRoute: typeof ApiAttachmentIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -150,6 +169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/attachment/$id': {
+      id: '/api/attachment/$id'
+      path: '/api/attachment/$id'
+      fullPath: '/api/attachment/$id'
+      preLoaderRoute: typeof ApiAttachmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/material/$id': {
       id: '/_authenticated/material/$id'
       path: '/material/$id'
@@ -181,6 +207,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiAttachmentIdRoute: ApiAttachmentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
