@@ -1,12 +1,10 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { ArrowLeft, Download, ExternalLink, FileText, StickyNote, Sparkles, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { getAttachmentSignedUrl } from "@/lib/materials.functions";
 import { useCatalogs } from "@/lib/catalogs";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -51,7 +49,6 @@ function MaterialDetail() {
   const router = useRouter();
   const { data: catalogs } = useCatalogs();
   const { isStaff } = useAuth();
-  const getUrl = useServerFn(getAttachmentSignedUrl);
   const [opening, setOpening] = useState<string | null>(null);
 
   const { data: m, isLoading } = useQuery({
