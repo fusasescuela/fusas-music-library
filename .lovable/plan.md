@@ -1,63 +1,43 @@
-## Objetivo
+# Arreglar descargas bloqueadas (ERR_BLOCKED_BY_CLIENT)
 
-Hoy cada material (tarjeta) admite **un solo** tipo de contenido: archivo, enlace/video o nota. El objetivo es que en una misma tarjeta se puedan subir y visualizar **varios elementos a la vez** (por ejemplo: un PDF + una nota + un video), sin que sean excluyentes.
+## Causa
+El error lo provoca una extensión del navegador (bloqueador de anuncios) que corta peticiones a `*.supabase.co`. Hoy la app abre directo la URL firmada de Supabase en una pestaña nueva (`window.open(...supabase.co...)`), y esa navegación es justamente lo que el bloqueador detecta y bloquea.
 
-## Enfoque
-
-Convertir el material en un "contenedor" (título, descripción, clasificación, visibilidad) y mover el contenido a una tabla nueva de **adjuntos**, donde cada material puede tener varios. Así se pueden combinar libremente archivos, enlaces/videos y notas, e incluso varios del mismo tipo.
-
-## 1. Base de datos
-
-Nueva tabla `material_attachments`:
+## Solución (combinada)
+Servir el archivo desde el dominio propio de la app (proxy) **y** descargarlo como blob, de modo que el navegador nunca navegue a `supabase.co`.
 
 ```text
-id            uuid (PK)
-material_id   uuid  -> materials.id (on delete cascade)
-kind          'file' | 'link' | 'text'
-file_path     text   (solo file)
-file_mime     text   (solo file)
-file_name     text   (solo file)
-external_url  text   (solo link/video)
-body_text     text   (solo text)
-position      int    (orden dentro de la tarjeta)
-created_at / updated_at
+Antes:  navegador ── abre ──▶ gzhsyjulctpihfgdwzbe.supabase.co   ❌ bloqueado
+Ahora:  navegador ── fetch ─▶ /api/attachment/{id}  ──▶ Supabase Storage (server)
+                                   (mismo dominio)         (lado servidor)
+        descarga como blob ──▶ guarda el archivo          ✅ sin bloqueo
 ```
 
-- GRANTs estándar + RLS:
-  - **Ver**: si el usuario puede ver el material padre (misma lógica: docentes/admin ven todo; estudiantes ven generales o asignados).
-  - **Gestionar**: admin, o docente dueño del material padre.
-- Migración de datos: por cada material existente, crear un adjunto a partir de su `type`/`file_path`/`external_url`/`body_text` actuales, para no perder nada.
-- Se conservan las columnas actuales de `materials` (no se borran) para evitar romper nada; el contenido pasa a leerse desde los adjuntos.
+## Cambios
 
-## 2. Formulario de subida (`subir.tsx`)
+### 1. Ruta servidor de proxy (dominio propio)
+Crear `src/routes/api/attachment.$id.tsx` con un handler `GET`:
+- Lee el token `Authorization: Bearer` del request.
+- Valida el usuario y verifica con RLS que pueda ver ese adjunto (consulta `material_attachments` como ese usuario).
+- Si tiene acceso, descarga el archivo desde Storage del lado servidor y lo devuelve como `Response` con:
+  - `Content-Type` correcto (ej. `application/pdf`).
+  - `Content-Disposition: attachment; filename="..."` para forzar la descarga.
+- Si no hay acceso o el archivo no existe, devuelve 401/404.
 
-- Reemplazar las pestañas excluyentes por **secciones acumulables**:
-  - Archivos: poder adjuntar uno o varios archivos.
-  - Enlaces / videos: agregar uno o varios enlaces (YouTube, Vimeo, etc.).
-  - Notas: agregar uno o varios bloques de texto.
-- Cada elemento agregado se puede quitar antes de guardar.
-- Al guardar: subir los archivos nuevos al storage e insertar/actualizar las filas en `material_attachments`. La clasificación (instrumento, nivel, materia, profesor, general) sigue igual a nivel material.
-- En edición: cargar los adjuntos existentes y permitir agregar/quitar.
+Como la respuesta sale de `fusas-music-library.lovable.app` (mismo origen), el bloqueador ya no la corta.
 
-## 3. Vista de detalle (`material.$id.tsx`)
+### 2. Descarga por blob en el cliente
+En `src/routes/_authenticated/material.$id.tsx`, reemplazar el `window.open(signedUrl)` por:
+- `fetch("/api/attachment/{id}", { headers: { Authorization: Bearer <token de sesión> } })`.
+- Convertir la respuesta a `blob`, crear un `URL.createObjectURL`, disparar un `<a download>` temporal y liberar el objeto.
+- Mantener el estado de "Abriendo…/Descargando…" y el manejo de errores con `toast`.
 
-- Renderizar **todos** los adjuntos del material, cada uno en su propio bloque dentro de la Card:
-  - file → nombre + botón "Abrir" (URL firmada).
-  - link/video → reproductor embebido (YouTube/Vimeo, lógica `getEmbedUrl` ya existente) + botón de enlace externo.
-  - text → nota con formato.
+Para los adjuntos tipo `link` (YouTube/Vimeo/enlaces externos) no cambia nada: siguen incrustándose o abriéndose como ahora.
 
-## 4. Tarjeta de biblioteca (`biblioteca.tsx`)
+### 3. Limpieza opcional
+La función `getAttachmentSignedUrl` puede quedar como respaldo o eliminarse si ya no se usa. Propongo dejarla por ahora para no romper otros usos.
 
-- En cada `MaterialCard`, mostrar pequeños íconos indicando qué tipos de contenido incluye (p. ej. 📄 + 🔗 + 📝).
-- Mantener el filtro por tipo, ahora basado en "el material contiene algún adjunto de ese tipo".
-
-## 5. Función de URL firmada (`materials.functions.ts`)
-
-- Cambiar `getMaterialSignedUrl` para recibir un `attachmentId` (o material + path) y validar el acceso vía RLS del material padre antes de firmar la URL del archivo correspondiente.
-
-## Detalles técnicos
-
-- Subida múltiple de archivos al bucket privado `materials` (ya existe), con rutas `userId/timestamp-nombre`.
-- Validación con zod por cada adjunto (enlace válido, nota no vacía, archivo presente).
-- Invalidar queries `["materials"]` y `["material", id]` tras guardar.
-- El tipo `MATERIAL_TYPE_LABELS` se reutiliza para etiquetar cada adjunto.
+## Notas técnicas
+- La ruta usa el cliente con service role solo del lado servidor (carga dinámica dentro del handler) y **solo después** de verificar el acceso del usuario con su token vía RLS, así no se expone contenido a quien no corresponde.
+- Se respeta el patrón de TanStack: la lógica privilegiada vive en el handler de la ruta, no en el cliente.
+- Resultado: las descargas funcionan aunque el usuario tenga un bloqueador activo, porque todo ocurre en el dominio de la app.
