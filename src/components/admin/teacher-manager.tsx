@@ -7,30 +7,70 @@ import { useCatalogs } from "@/lib/catalogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-
-const NONE = "none";
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface TeacherRow {
   id: string;
   name: string;
-  instrument_id: string | null;
+  teacher_instruments: { instrument_id: string }[];
+  teacher_subjects: { subject_id: string }[];
+}
+
+interface CatalogItem {
+  id: string;
+  name: string;
+}
+
+function MultiSelect({
+  label, items, selected, onToggle,
+}: {
+  label: string;
+  items: CatalogItem[];
+  selected: string[];
+  onToggle: (id: string) => void;
+}) {
+  const summary = selected.length === 0 ? label : `${label} (${selected.length})`;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="justify-start sm:w-56">{summary}</Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 max-h-72 overflow-y-auto">
+        {items.length === 0 && <p className="text-sm text-muted-foreground">Sin opciones</p>}
+        <div className="space-y-2">
+          {items.map((it) => (
+            <Label key={it.id} className="flex items-center gap-2 font-normal">
+              <Checkbox checked={selected.includes(it.id)} onCheckedChange={() => onToggle(it.id)} />
+              {it.name}
+            </Label>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function TeacherManager() {
   const queryClient = useQueryClient();
   const { data: catalogs } = useCatalogs();
   const [name, setName] = useState("");
-  const [instrument, setInstrument] = useState(NONE);
+  const [instruments, setInstruments] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
 
   const { data: teachers } = useQuery({
     queryKey: ["catalog", "teachers"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("teachers").select("id, name, instrument_id").order("name");
+      const { data, error } = await supabase
+        .from("teachers")
+        .select("id, name, teacher_instruments(instrument_id), teacher_subjects(subject_id)")
+        .order("name");
       if (error) throw error;
-      return data as TeacherRow[];
+      return data as unknown as TeacherRow[];
     },
   });
 
@@ -39,14 +79,49 @@ export function TeacherManager() {
     queryClient.invalidateQueries({ queryKey: ["catalogs"] });
   }
 
+  function toggle(list: string[], set: (v: string[]) => void, id: string) {
+    set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+  }
+
   async function add() {
     if (!name.trim()) return;
-    const { error } = await supabase.from("teachers").insert({
-      name: name.trim(),
-      instrument_id: instrument === NONE ? null : instrument,
-    });
+    const { data: created, error } = await supabase
+      .from("teachers")
+      .insert({ name: name.trim() })
+      .select("id")
+      .single();
+    if (error || !created) return toast.error(error?.message ?? "Error al crear profesor");
+    await saveLinks(created.id, instruments, subjects);
+    setName(""); setInstruments([]); setSubjects([]); refresh();
+  }
+
+  async function saveLinks(teacherId: string, instrIds: string[], subjIds: string[]) {
+    if (instrIds.length) {
+      await supabase.from("teacher_instruments").insert(
+        instrIds.map((instrument_id) => ({ teacher_id: teacherId, instrument_id })),
+      );
+    }
+    if (subjIds.length) {
+      await supabase.from("teacher_subjects").insert(
+        subjIds.map((subject_id) => ({ teacher_id: teacherId, subject_id })),
+      );
+    }
+  }
+
+  async function toggleInstrument(teacherId: string, instrumentId: string, on: boolean) {
+    const { error } = on
+      ? await supabase.from("teacher_instruments").insert({ teacher_id: teacherId, instrument_id: instrumentId })
+      : await supabase.from("teacher_instruments").delete().eq("teacher_id", teacherId).eq("instrument_id", instrumentId);
     if (error) return toast.error(error.message);
-    setName(""); setInstrument(NONE); refresh();
+    refresh();
+  }
+
+  async function toggleSubject(teacherId: string, subjectId: string, on: boolean) {
+    const { error } = on
+      ? await supabase.from("teacher_subjects").insert({ teacher_id: teacherId, subject_id: subjectId })
+      : await supabase.from("teacher_subjects").delete().eq("teacher_id", teacherId).eq("subject_id", subjectId);
+    if (error) return toast.error(error.message);
+    refresh();
   }
 
   async function remove(id: string) {
@@ -55,34 +130,73 @@ export function TeacherManager() {
     refresh();
   }
 
-  const instrName = (id: string | null) => catalogs?.instruments.find((i) => i.id === id)?.name;
+  const instrName = (id: string) => catalogs?.instruments.find((i) => i.id === id)?.name ?? id;
+  const subjName = (id: string) => catalogs?.subjects.find((s) => s.id === id)?.name ?? id;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre del profesor" />
-        <Select value={instrument} onValueChange={setInstrument}>
-          <SelectTrigger className="sm:w-56"><SelectValue placeholder="Instrumento (opcional)" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>Sin instrumento</SelectItem>
-            {catalogs?.instruments.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre del profesor" className="sm:w-56" />
+        <MultiSelect label="Instrumentos" items={catalogs?.instruments ?? []} selected={instruments} onToggle={(id) => toggle(instruments, setInstruments, id)} />
+        <MultiSelect label="Materias" items={catalogs?.subjects ?? []} selected={subjects} onToggle={(id) => toggle(subjects, setSubjects, id)} />
         <Button onClick={add} className="gap-2"><Plus className="h-4 w-4" /> Agregar</Button>
       </div>
       <Card className="divide-y divide-border">
         {(teachers ?? []).length === 0 && <p className="p-4 text-sm text-muted-foreground">Aún no hay profesores.</p>}
-        {(teachers ?? []).map((t) => (
-          <div key={t.id} className="flex items-center justify-between p-3">
-            <div>
-              <p className="text-sm font-medium">{t.name}</p>
-              {t.instrument_id && <p className="text-xs text-muted-foreground">{instrName(t.instrument_id)}</p>}
+        {(teachers ?? []).map((t) => {
+          const tInstr = t.teacher_instruments.map((x) => x.instrument_id);
+          const tSubj = t.teacher_subjects.map((x) => x.subject_id);
+          return (
+            <div key={t.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{t.name}</p>
+                <div className="flex flex-wrap gap-1">
+                  {tInstr.length === 0 && <span className="text-xs text-muted-foreground">Sin instrumentos</span>}
+                  {tInstr.map((id) => <Badge key={id} variant="secondary">{instrName(id)}</Badge>)}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {tSubj.length === 0 && <span className="text-xs text-muted-foreground">Sin materias</span>}
+                  {tSubj.map((id) => <Badge key={id} variant="outline">{subjName(id)}</Badge>)}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">Instrumentos</Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 max-h-72 overflow-y-auto">
+                    <div className="space-y-2">
+                      {(catalogs?.instruments ?? []).map((i) => (
+                        <Label key={i.id} className="flex items-center gap-2 font-normal">
+                          <Checkbox checked={tInstr.includes(i.id)} onCheckedChange={(c) => toggleInstrument(t.id, i.id, !!c)} />
+                          {i.name}
+                        </Label>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">Materias</Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 max-h-72 overflow-y-auto">
+                    <div className="space-y-2">
+                      {(catalogs?.subjects ?? []).map((s) => (
+                        <Label key={s.id} className="flex items-center gap-2 font-normal">
+                          <Checkbox checked={tSubj.includes(s.id)} onCheckedChange={(c) => toggleSubject(t.id, s.id, !!c)} />
+                          {s.name}
+                        </Label>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button size="icon" variant="ghost" onClick={() => remove(t.id)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
             </div>
-            <Button size="icon" variant="ghost" onClick={() => remove(t.id)}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </Card>
     </div>
   );
