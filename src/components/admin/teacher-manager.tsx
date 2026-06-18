@@ -139,11 +139,45 @@ export function TeacherManager() {
     refresh();
   }
 
+  async function setAllInstruments(teacherId: string, current: string[], on: boolean) {
+    const all = catalogs?.instruments ?? [];
+    if (on) {
+      const missing = all.filter((i) => !current.includes(i.id));
+      if (missing.length) {
+        const { error } = await supabase.from("teacher_instruments").insert(
+          missing.map((i) => ({ teacher_id: teacherId, instrument_id: i.id })),
+        );
+        if (error) return toast.error(error.message);
+      }
+    } else {
+      const { error } = await supabase.from("teacher_instruments").delete().eq("teacher_id", teacherId);
+      if (error) return toast.error(error.message);
+    }
+    refresh();
+  }
+
   async function toggleSubject(teacherId: string, subjectId: string, on: boolean) {
     const { error } = on
       ? await supabase.from("teacher_subjects").insert({ teacher_id: teacherId, subject_id: subjectId })
       : await supabase.from("teacher_subjects").delete().eq("teacher_id", teacherId).eq("subject_id", subjectId);
     if (error) return toast.error(error.message);
+    refresh();
+  }
+
+  async function setAllSubjects(teacherId: string, current: string[], on: boolean) {
+    const all = catalogs?.subjects ?? [];
+    if (on) {
+      const missing = all.filter((s) => !current.includes(s.id));
+      if (missing.length) {
+        const { error } = await supabase.from("teacher_subjects").insert(
+          missing.map((s) => ({ teacher_id: teacherId, subject_id: s.id })),
+        );
+        if (error) return toast.error(error.message);
+      }
+    } else {
+      const { error } = await supabase.from("teacher_subjects").delete().eq("teacher_id", teacherId);
+      if (error) return toast.error(error.message);
+    }
     refresh();
   }
 
