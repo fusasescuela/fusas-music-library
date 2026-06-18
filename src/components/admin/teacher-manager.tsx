@@ -35,6 +35,7 @@ function MultiSelect({
   onToggle: (id: string) => void;
 }) {
   const summary = selected.length === 0 ? label : `${label} (${selected.length})`;
+  const allSelected = items.length > 0 && selected.length === items.length;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -43,6 +44,18 @@ function MultiSelect({
       <PopoverContent className="w-56 max-h-72 overflow-y-auto">
         {items.length === 0 && <p className="text-sm text-muted-foreground">Sin opciones</p>}
         <div className="space-y-2">
+          {items.length > 0 && (
+            <>
+              <Label className="flex items-center gap-2 font-medium">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={() => onToggle("__all__")}
+                />
+                Todos
+              </Label>
+              <div className="my-1 border-t border-border" />
+            </>
+          )}
           {items.map((it) => (
             <Label key={it.id} className="flex items-center gap-2 font-normal">
               <Checkbox checked={selected.includes(it.id)} onCheckedChange={() => onToggle(it.id)} />
@@ -83,6 +96,16 @@ export function TeacherManager() {
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   }
 
+  function toggleWithAll(
+    list: string[], set: (v: string[]) => void, id: string, allItems: CatalogItem[],
+  ) {
+    if (id === "__all__") {
+      set(list.length === allItems.length ? [] : allItems.map((i) => i.id));
+      return;
+    }
+    toggle(list, set, id);
+  }
+
   async function add() {
     if (!name.trim()) return;
     const { data: created, error } = await supabase
@@ -116,11 +139,45 @@ export function TeacherManager() {
     refresh();
   }
 
+  async function setAllInstruments(teacherId: string, current: string[], on: boolean) {
+    const all = catalogs?.instruments ?? [];
+    if (on) {
+      const missing = all.filter((i) => !current.includes(i.id));
+      if (missing.length) {
+        const { error } = await supabase.from("teacher_instruments").insert(
+          missing.map((i) => ({ teacher_id: teacherId, instrument_id: i.id })),
+        );
+        if (error) return toast.error(error.message);
+      }
+    } else {
+      const { error } = await supabase.from("teacher_instruments").delete().eq("teacher_id", teacherId);
+      if (error) return toast.error(error.message);
+    }
+    refresh();
+  }
+
   async function toggleSubject(teacherId: string, subjectId: string, on: boolean) {
     const { error } = on
       ? await supabase.from("teacher_subjects").insert({ teacher_id: teacherId, subject_id: subjectId })
       : await supabase.from("teacher_subjects").delete().eq("teacher_id", teacherId).eq("subject_id", subjectId);
     if (error) return toast.error(error.message);
+    refresh();
+  }
+
+  async function setAllSubjects(teacherId: string, current: string[], on: boolean) {
+    const all = catalogs?.subjects ?? [];
+    if (on) {
+      const missing = all.filter((s) => !current.includes(s.id));
+      if (missing.length) {
+        const { error } = await supabase.from("teacher_subjects").insert(
+          missing.map((s) => ({ teacher_id: teacherId, subject_id: s.id })),
+        );
+        if (error) return toast.error(error.message);
+      }
+    } else {
+      const { error } = await supabase.from("teacher_subjects").delete().eq("teacher_id", teacherId);
+      if (error) return toast.error(error.message);
+    }
     refresh();
   }
 
@@ -137,8 +194,8 @@ export function TeacherManager() {
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre del profesor" className="sm:w-56" />
-        <MultiSelect label="Instrumentos" items={catalogs?.instruments ?? []} selected={instruments} onToggle={(id) => toggle(instruments, setInstruments, id)} />
-        <MultiSelect label="Materias" items={catalogs?.subjects ?? []} selected={subjects} onToggle={(id) => toggle(subjects, setSubjects, id)} />
+        <MultiSelect label="Instrumentos" items={catalogs?.instruments ?? []} selected={instruments} onToggle={(id) => toggleWithAll(instruments, setInstruments, id, catalogs?.instruments ?? [])} />
+        <MultiSelect label="Materias" items={catalogs?.subjects ?? []} selected={subjects} onToggle={(id) => toggleWithAll(subjects, setSubjects, id, catalogs?.subjects ?? [])} />
         <Button onClick={add} className="gap-2"><Plus className="h-4 w-4" /> Agregar</Button>
       </div>
       <Card className="divide-y divide-border">
@@ -166,6 +223,18 @@ export function TeacherManager() {
                   </PopoverTrigger>
                   <PopoverContent className="w-56 max-h-72 overflow-y-auto">
                     <div className="space-y-2">
+                      {(catalogs?.instruments ?? []).length > 0 && (
+                        <>
+                          <Label className="flex items-center gap-2 font-medium">
+                            <Checkbox
+                              checked={tInstr.length === (catalogs?.instruments ?? []).length}
+                              onCheckedChange={(c) => setAllInstruments(t.id, tInstr, !!c)}
+                            />
+                            Todos
+                          </Label>
+                          <div className="my-1 border-t border-border" />
+                        </>
+                      )}
                       {(catalogs?.instruments ?? []).map((i) => (
                         <Label key={i.id} className="flex items-center gap-2 font-normal">
                           <Checkbox checked={tInstr.includes(i.id)} onCheckedChange={(c) => toggleInstrument(t.id, i.id, !!c)} />
@@ -181,6 +250,18 @@ export function TeacherManager() {
                   </PopoverTrigger>
                   <PopoverContent className="w-56 max-h-72 overflow-y-auto">
                     <div className="space-y-2">
+                      {(catalogs?.subjects ?? []).length > 0 && (
+                        <>
+                          <Label className="flex items-center gap-2 font-medium">
+                            <Checkbox
+                              checked={tSubj.length === (catalogs?.subjects ?? []).length}
+                              onCheckedChange={(c) => setAllSubjects(t.id, tSubj, !!c)}
+                            />
+                            Todos
+                          </Label>
+                          <div className="my-1 border-t border-border" />
+                        </>
+                      )}
                       {(catalogs?.subjects ?? []).map((s) => (
                         <Label key={s.id} className="flex items-center gap-2 font-normal">
                           <Checkbox checked={tSubj.includes(s.id)} onCheckedChange={(c) => toggleSubject(t.id, s.id, !!c)} />
