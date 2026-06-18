@@ -35,6 +35,7 @@ function MultiSelect({
   onToggle: (id: string) => void;
 }) {
   const summary = selected.length === 0 ? label : `${label} (${selected.length})`;
+  const allSelected = items.length > 0 && selected.length === items.length;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -43,6 +44,18 @@ function MultiSelect({
       <PopoverContent className="w-56 max-h-72 overflow-y-auto">
         {items.length === 0 && <p className="text-sm text-muted-foreground">Sin opciones</p>}
         <div className="space-y-2">
+          {items.length > 0 && (
+            <>
+              <Label className="flex items-center gap-2 font-medium">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={() => onToggle("__all__")}
+                />
+                Todos
+              </Label>
+              <div className="my-1 border-t border-border" />
+            </>
+          )}
           {items.map((it) => (
             <Label key={it.id} className="flex items-center gap-2 font-normal">
               <Checkbox checked={selected.includes(it.id)} onCheckedChange={() => onToggle(it.id)} />
