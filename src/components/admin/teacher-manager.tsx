@@ -223,6 +223,18 @@ export function TeacherManager() {
                   </PopoverTrigger>
                   <PopoverContent className="w-56 max-h-72 overflow-y-auto">
                     <div className="space-y-2">
+                      {(catalogs?.instruments ?? []).length > 0 && (
+                        <>
+                          <Label className="flex items-center gap-2 font-medium">
+                            <Checkbox
+                              checked={tInstr.length === (catalogs?.instruments ?? []).length}
+                              onCheckedChange={(c) => setAllInstruments(t.id, tInstr, !!c)}
+                            />
+                            Todos
+                          </Label>
+                          <div className="my-1 border-t border-border" />
+                        </>
+                      )}
                       {(catalogs?.instruments ?? []).map((i) => (
                         <Label key={i.id} className="flex items-center gap-2 font-normal">
                           <Checkbox checked={tInstr.includes(i.id)} onCheckedChange={(c) => toggleInstrument(t.id, i.id, !!c)} />
@@ -238,6 +250,18 @@ export function TeacherManager() {
                   </PopoverTrigger>
                   <PopoverContent className="w-56 max-h-72 overflow-y-auto">
                     <div className="space-y-2">
+                      {(catalogs?.subjects ?? []).length > 0 && (
+                        <>
+                          <Label className="flex items-center gap-2 font-medium">
+                            <Checkbox
+                              checked={tSubj.length === (catalogs?.subjects ?? []).length}
+                              onCheckedChange={(c) => setAllSubjects(t.id, tSubj, !!c)}
+                            />
+                            Todos
+                          </Label>
+                          <div className="my-1 border-t border-border" />
+                        </>
+                      )}
                       {(catalogs?.subjects ?? []).map((s) => (
                         <Label key={s.id} className="flex items-center gap-2 font-normal">
                           <Checkbox checked={tSubj.includes(s.id)} onCheckedChange={(c) => toggleSubject(t.id, s.id, !!c)} />
