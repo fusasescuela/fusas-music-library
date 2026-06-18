@@ -96,6 +96,16 @@ export function TeacherManager() {
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   }
 
+  function toggleWithAll(
+    list: string[], set: (v: string[]) => void, id: string, allItems: CatalogItem[],
+  ) {
+    if (id === "__all__") {
+      set(list.length === allItems.length ? [] : allItems.map((i) => i.id));
+      return;
+    }
+    toggle(list, set, id);
+  }
+
   async function add() {
     if (!name.trim()) return;
     const { data: created, error } = await supabase
@@ -150,8 +160,8 @@ export function TeacherManager() {
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre del profesor" className="sm:w-56" />
-        <MultiSelect label="Instrumentos" items={catalogs?.instruments ?? []} selected={instruments} onToggle={(id) => toggle(instruments, setInstruments, id)} />
-        <MultiSelect label="Materias" items={catalogs?.subjects ?? []} selected={subjects} onToggle={(id) => toggle(subjects, setSubjects, id)} />
+        <MultiSelect label="Instrumentos" items={catalogs?.instruments ?? []} selected={instruments} onToggle={(id) => toggleWithAll(instruments, setInstruments, id, catalogs?.instruments ?? [])} />
+        <MultiSelect label="Materias" items={catalogs?.subjects ?? []} selected={subjects} onToggle={(id) => toggleWithAll(subjects, setSubjects, id, catalogs?.subjects ?? [])} />
         <Button onClick={add} className="gap-2"><Plus className="h-4 w-4" /> Agregar</Button>
       </div>
       <Card className="divide-y divide-border">
