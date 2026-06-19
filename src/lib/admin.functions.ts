@@ -63,6 +63,34 @@ const updateRolesSchema = z.object({
   roles: z.array(z.enum(["admin", "docente", "estudiante"])).min(1),
 });
 
+const updateProfileSchema = z.object({
+  userId: z.string().uuid(),
+  fullName: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(255),
+});
+
+export const updateUserProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => updateProfileSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { error: aErr } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+      email: data.email,
+      user_metadata: { full_name: data.fullName },
+    });
+    if (aErr) throw new Error(aErr.message);
+
+    const { error: pErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ full_name: data.fullName, email: data.email })
+      .eq("id", data.userId);
+    if (pErr) throw new Error(pErr.message);
+
+    return { ok: true };
+  });
+
 export const updateUserRoles = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => updateRolesSchema.parse(data))
