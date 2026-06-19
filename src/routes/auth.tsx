@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useTheme } from "@/lib/theme";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Moon, Sun } from "lucide-react";
 import fusasLogo from "@/assets/fusas-logo.png";
 
 export const Route = createFileRoute("/auth")({
@@ -19,6 +21,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { theme, toggle } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,7 +68,12 @@ function AuthPage() {
         <p className="text-sm text-white/60">FUSAS Escuela de Música</p>
       </div>
 
-      <div className="flex items-center justify-center p-6">
+      <div className="flex items-center justify-center p-6 relative">
+        <div className="absolute top-4 right-4">
+          <Button variant="ghost" size="icon" onClick={toggle} title="Cambiar tema">
+            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+        </div>
         <form onSubmit={onSubmit} className="w-full max-w-sm space-y-6">
           <div className="lg:hidden">
             <Link to="/" className="inline-block hover:opacity-80 transition">

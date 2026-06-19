@@ -1,9 +1,10 @@
 import { type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, LibraryBig, Upload, Settings } from "lucide-react";
+import { LogOut, LibraryBig, Upload, Settings, Moon, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import fusasLogo from "@/assets/fusas-logo.png";
 
@@ -16,6 +17,7 @@ function roleLabel(roles: string[]) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, roles, isAdmin, isStaff } = useAuth();
+  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -72,7 +74,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="text-sm font-semibold leading-none">{user?.fullName || "—"}</p>
               <p className="text-xs text-muted-foreground">{roleLabel(roles)}</p>
             </div>
-            <Button variant="outline" size="icon" onClick={signOut} title="Cerrar sesión">
+            <Button variant="ghost" size="icon" onClick={toggle} title="Cambiar tema" className="shrink-0">
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            <Button variant="outline" size="icon" onClick={signOut} title="Cerrar sesión" className="shrink-0">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
