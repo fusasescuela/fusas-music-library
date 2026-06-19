@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2, GraduationCap, UserPlus, X, Shield } from "lucide-react";
+import { Plus, Trash2, GraduationCap, UserPlus, X, Shield, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createAppUser, deleteAppUser, updateUserRoles } from "@/lib/admin.functions";
+import { createAppUser, deleteAppUser, updateUserRoles, updateUserProfile } from "@/lib/admin.functions";
 import { useCatalogs } from "@/lib/catalogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,6 +141,7 @@ export function UserManager() {
             </div>
             <div className="flex items-center gap-2">
               {u.roles.map((r) => <Badge key={r} variant="secondary">{ROLE_LABELS[r] ?? r}</Badge>)}
+              <EditUserDialog userId={u.id} fullName={u.full_name} email={u.email} />
               <RolesDialog userId={u.id} name={u.full_name} currentRoles={u.roles} />
               {u.roles.includes("estudiante") && <AssignmentsDialog studentId={u.id} name={u.full_name} />}
               <Button size="icon" variant="ghost" onClick={() => onDelete(u.id)}>
@@ -318,5 +319,56 @@ function Pick({
         {options.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
       </SelectContent>
     </Select>
+  );
+}
+
+function EditUserDialog({ userId, fullName, email }: { userId: string; fullName: string; email: string }) {
+  const queryClient = useQueryClient();
+  const updateProfile = useServerFn(updateUserProfile);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(fullName);
+  const [mail, setMail] = useState(email);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await updateProfile({ data: { userId, fullName: name.trim(), email: mail.trim() } });
+      toast.success("Usuario actualizado.");
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo actualizar.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setName(fullName); setMail(email); } }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1.5">
+          <Pencil className="h-4 w-4" /> Editar
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Editar usuario</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nombre completo</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Correo electrónico</Label>
+            <Input type="email" value={mail} onChange={(e) => setMail(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={save} disabled={saving || !name.trim() || !mail.trim()}>
+            {saving ? "Guardando…" : "Guardar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
