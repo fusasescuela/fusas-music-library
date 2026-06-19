@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCatalogs } from "@/lib/catalogs";
@@ -74,6 +74,8 @@ export function TeacherManager() {
   const [name, setName] = useState("");
   const [instruments, setInstruments] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
 
   const { data: teachers } = useQuery({
     queryKey: ["catalog", "teachers"],
@@ -187,6 +189,14 @@ export function TeacherManager() {
     refresh();
   }
 
+  async function saveName(id: string) {
+    if (!editName.trim()) return;
+    const { error } = await supabase.from("teachers").update({ name: editName.trim() }).eq("id", id);
+    if (error) return toast.error(error.message);
+    setEditingId(null);
+    refresh();
+  }
+
   const instrName = (id: string) => catalogs?.instruments.find((i) => i.id === id)?.name ?? id;
   const subjName = (id: string) => catalogs?.subjects.find((s) => s.id === id)?.name ?? id;
 
@@ -206,7 +216,21 @@ export function TeacherManager() {
           return (
             <div key={t.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium">{t.name}</p>
+                {editingId === t.id ? (
+                  <div className="flex items-center gap-1">
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 sm:w-56"
+                      onKeyDown={(e) => e.key === "Enter" && saveName(t.id)} />
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveName(t.id)}><Check className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <p className="text-sm font-medium">{t.name}</p>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(t.id); setEditName(t.name); }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-1">
                   {tInstr.length === 0 && <span className="text-xs text-muted-foreground">Sin instrumentos</span>}
                   {tInstr.map((id) => <Badge key={id} variant="secondary">{instrName(id)}</Badge>)}
