@@ -34,3 +34,5 @@ dist-ssr
 # Secrets and local folders
 .env
 .vercel/
+
+.vercel

@@ -5,7 +5,7 @@ import { LogOut, LibraryBig, Upload, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import fusasLogo from "@/assets/fusas-logo.png.asset.json";
+import fusasLogo from "@/assets/fusas-logo.png";
 
 function roleLabel(roles: string[]) {
   if (roles.includes("admin")) return "Administrador";
@@ -31,7 +31,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
           <Link to="/biblioteca" className="flex items-center gap-2">
-            <img src={fusasLogo.url} alt="FUSAS" className="h-7 w-auto" />
+            <div className="h-7 px-1.5 rounded-md bg-white grid place-items-center shadow-sm shrink-0 border border-border">
+              <img src={fusasLogo} alt="FUSAS" className="h-4 w-auto" />
+            </div>
             <span className="font-display text-lg font-bold leading-none">
               Biblioteca
             </span>
