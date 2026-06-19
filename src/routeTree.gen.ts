@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TunerRouteImport } from './routes/tuner'
+import { Route as MetronomeRouteImport } from './routes/metronome'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,6 +20,16 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as ApiAttachmentIdRouteImport } from './routes/api/attachment.$id'
 import { Route as AuthenticatedMaterialIdRouteImport } from './routes/_authenticated/material.$id'
 
+const TunerRoute = TunerRouteImport.update({
+  id: '/tuner',
+  path: '/tuner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetronomeRoute = MetronomeRouteImport.update({
+  id: '/metronome',
+  path: '/metronome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -61,6 +73,8 @@ const AuthenticatedMaterialIdRoute = AuthenticatedMaterialIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/metronome': typeof MetronomeRoute
+  '/tuner': typeof TunerRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/subir': typeof AuthenticatedSubirRoute
@@ -70,6 +84,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/metronome': typeof MetronomeRoute
+  '/tuner': typeof TunerRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/subir': typeof AuthenticatedSubirRoute
@@ -81,6 +97,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/metronome': typeof MetronomeRoute
+  '/tuner': typeof TunerRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/_authenticated/subir': typeof AuthenticatedSubirRoute
@@ -92,6 +110,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/metronome'
+    | '/tuner'
     | '/admin'
     | '/biblioteca'
     | '/subir'
@@ -101,6 +121,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/metronome'
+    | '/tuner'
     | '/admin'
     | '/biblioteca'
     | '/subir'
@@ -111,6 +133,8 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/metronome'
+    | '/tuner'
     | '/_authenticated/admin'
     | '/_authenticated/biblioteca'
     | '/_authenticated/subir'
@@ -122,11 +146,27 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  MetronomeRoute: typeof MetronomeRoute
+  TunerRoute: typeof TunerRoute
   ApiAttachmentIdRoute: typeof ApiAttachmentIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tuner': {
+      id: '/tuner'
+      path: '/tuner'
+      fullPath: '/tuner'
+      preLoaderRoute: typeof TunerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/metronome': {
+      id: '/metronome'
+      path: '/metronome'
+      fullPath: '/metronome'
+      preLoaderRoute: typeof MetronomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -207,6 +247,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  MetronomeRoute: MetronomeRoute,
+  TunerRoute: TunerRoute,
   ApiAttachmentIdRoute: ApiAttachmentIdRoute,
 }
 export const routeTree = rootRouteImport
