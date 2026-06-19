@@ -1,12 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import fusasLogoWhite from "@/assets/fusas-logo-white.png.asset.json";
-import fusasLogo from "@/assets/fusas-logo.png.asset.json";
+import fusasLogo from "@/assets/fusas-logo.png";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -49,10 +48,12 @@ function AuthPage() {
         className="relative hidden flex-col justify-between p-12 text-white lg:flex"
         style={{ background: "var(--gradient-hero)" }}
       >
-        <div className="flex items-center gap-3">
-          <img src={fusasLogoWhite.url} alt="FUSAS" className="h-9 w-auto" />
+        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition w-fit">
+          <div className="h-9 px-2 rounded-lg bg-white grid place-items-center shadow-sm shrink-0">
+            <img src={fusasLogo} alt="FUSAS" className="h-5 w-auto" />
+          </div>
           <span className="font-display text-xl font-bold">Biblioteca</span>
-        </div>
+        </Link>
         <div>
           <h1 className="font-display text-4xl font-extrabold leading-tight">
             Toda la música de tu escuela, en un solo lugar.
@@ -67,7 +68,11 @@ function AuthPage() {
       <div className="flex items-center justify-center p-6">
         <form onSubmit={onSubmit} className="w-full max-w-sm space-y-6">
           <div className="lg:hidden">
-            <img src={fusasLogo.url} alt="FUSAS" className="h-9 w-auto" />
+            <Link to="/" className="inline-block hover:opacity-80 transition">
+              <div className="h-9 px-2 rounded-lg bg-white grid place-items-center shadow-sm shrink-0 border border-border">
+                <img src={fusasLogo} alt="FUSAS" className="h-5 w-auto" />
+              </div>
+            </Link>
           </div>
           <div>
             <h2 className="font-display text-2xl font-bold">Iniciar sesión</h2>
@@ -86,9 +91,21 @@ function AuthPage() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Ingresando…" : "Entrar"}
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            ¿No tienes cuenta? Solicítala a la administración de la escuela.
-          </p>
+
+          <div className="space-y-4 pt-2">
+            <p className="text-center text-xs text-muted-foreground">
+              ¿No tienes cuenta? Solicítala a la administración de la escuela.
+            </p>
+            
+            <div className="text-center">
+              <Link 
+                to="/" 
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ← Volver al inicio
+              </Link>
+            </div>
+          </div>
         </form>
       </div>
     </div>
