@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TunerRouteImport } from './routes/tuner'
 import { Route as MetronomeRouteImport } from './routes/metronome'
+import { Route as EntradasRouteImport } from './routes/entradas'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -28,6 +29,11 @@ const TunerRoute = TunerRouteImport.update({
 const MetronomeRoute = MetronomeRouteImport.update({
   id: '/metronome',
   path: '/metronome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntradasRoute = EntradasRouteImport.update({
+  id: '/entradas',
+  path: '/entradas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -73,6 +79,7 @@ const AuthenticatedMaterialIdRoute = AuthenticatedMaterialIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/entradas': typeof EntradasRoute
   '/metronome': typeof MetronomeRoute
   '/tuner': typeof TunerRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/entradas': typeof EntradasRoute
   '/metronome': typeof MetronomeRoute
   '/tuner': typeof TunerRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/entradas': typeof EntradasRoute
   '/metronome': typeof MetronomeRoute
   '/tuner': typeof TunerRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/entradas'
     | '/metronome'
     | '/tuner'
     | '/admin'
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/entradas'
     | '/metronome'
     | '/tuner'
     | '/admin'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/entradas'
     | '/metronome'
     | '/tuner'
     | '/_authenticated/admin'
@@ -146,6 +158,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  EntradasRoute: typeof EntradasRoute
   MetronomeRoute: typeof MetronomeRoute
   TunerRoute: typeof TunerRoute
   ApiAttachmentIdRoute: typeof ApiAttachmentIdRoute
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       path: '/metronome'
       fullPath: '/metronome'
       preLoaderRoute: typeof MetronomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entradas': {
+      id: '/entradas'
+      path: '/entradas'
+      fullPath: '/entradas'
+      preLoaderRoute: typeof EntradasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -247,6 +267,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  EntradasRoute: EntradasRoute,
   MetronomeRoute: MetronomeRoute,
   TunerRoute: TunerRoute,
   ApiAttachmentIdRoute: ApiAttachmentIdRoute,

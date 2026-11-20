@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Mic, Activity, BookOpen } from "lucide-react";
+import { Mic, Activity, BookOpen, Ticket, ArrowRight } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { AddShortcutButton } from "@/components/AddShortcutButton";
 
@@ -30,6 +30,22 @@ function Index() {
           />
         </div>
 
+
+        <a
+          href="https://entradas-fusas.lovable.app/"
+          className="w-full group rounded-2xl border border-primary bg-primary text-primary-foreground shadow-md hover:shadow-xl hover:opacity-95 transition p-5 flex items-center gap-5"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-primary-foreground/15 text-primary-foreground grid place-items-center shrink-0">
+            <Ticket className="w-7 h-7" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-lg font-semibold leading-tight">Entradas Fin de Año</div>
+            <div className="text-sm text-primary-foreground/80">
+              Reservá tu lugar para el evento anual
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-primary-foreground/80 shrink-0 group-hover:translate-x-1 transition-transform" />
+        </a>
 
         <div className="text-center max-w-sm">
           <h1 className="font-bold tracking-tight text-xl">Tus herramientas de estudio</h1>
