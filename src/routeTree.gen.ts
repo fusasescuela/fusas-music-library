@@ -9,31 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TunerRouteImport } from './routes/tuner'
-import { Route as MetronomeRouteImport } from './routes/metronome'
-import { Route as EntradasRouteImport } from './routes/entradas'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedSubirRouteImport } from './routes/_authenticated/subir'
-import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authenticated/biblioteca'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as EntradasRouteImport } from './routes/entradas'
+import { Route as MetronomeRouteImport } from './routes/metronome'
+import { Route as TunerRouteImport } from './routes/tuner'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
-import { Route as ApiAttachmentIdRouteImport } from './routes/api/attachment.$id'
+import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authenticated/biblioteca'
+import { Route as AuthenticatedSubirRouteImport } from './routes/_authenticated/subir'
 import { Route as AuthenticatedMaterialIdRouteImport } from './routes/_authenticated/material.$id'
+import { Route as ApiAttachmentIdRouteImport } from './routes/api/attachment.$id'
 
-const TunerRoute = TunerRouteImport.update({
-  id: '/tuner',
-  path: '/tuner',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MetronomeRoute = MetronomeRouteImport.update({
-  id: '/metronome',
-  path: '/metronome',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EntradasRoute = EntradasRouteImport.update({
-  id: '/entradas',
-  path: '/entradas',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -41,18 +35,24 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const EntradasRoute = EntradasRouteImport.update({
+  id: '/entradas',
+  path: '/entradas',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const MetronomeRoute = MetronomeRouteImport.update({
+  id: '/metronome',
+  path: '/metronome',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedSubirRoute = AuthenticatedSubirRouteImport.update({
-  id: '/subir',
-  path: '/subir',
+const TunerRoute = TunerRouteImport.update({
+  id: '/tuner',
+  path: '/tuner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBibliotecaRoute = AuthenticatedBibliotecaRouteImport.update({
@@ -60,20 +60,20 @@ const AuthenticatedBibliotecaRoute = AuthenticatedBibliotecaRouteImport.update({
   path: '/biblioteca',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedSubirRoute = AuthenticatedSubirRouteImport.update({
+  id: '/subir',
+  path: '/subir',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMaterialIdRoute = AuthenticatedMaterialIdRouteImport.update({
+  id: '/material/$id',
+  path: '/material/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiAttachmentIdRoute = ApiAttachmentIdRouteImport.update({
   id: '/api/attachment/$id',
   path: '/api/attachment/$id',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedMaterialIdRoute = AuthenticatedMaterialIdRouteImport.update({
-  id: '/material/$id',
-  path: '/material/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -166,32 +166,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/tuner': {
-      id: '/tuner'
-      path: '/tuner'
-      fullPath: '/tuner'
-      preLoaderRoute: typeof TunerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/metronome': {
-      id: '/metronome'
-      path: '/metronome'
-      fullPath: '/metronome'
-      preLoaderRoute: typeof MetronomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/entradas': {
-      id: '/entradas'
-      path: '/entradas'
-      fullPath: '/entradas'
-      preLoaderRoute: typeof EntradasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -201,18 +180,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/subir': {
-      id: '/_authenticated/subir'
-      path: '/subir'
-      fullPath: '/subir'
-      preLoaderRoute: typeof AuthenticatedSubirRouteImport
+    '/entradas': {
+      id: '/entradas'
+      path: '/entradas'
+      fullPath: '/entradas'
+      preLoaderRoute: typeof EntradasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/metronome': {
+      id: '/metronome'
+      path: '/metronome'
+      fullPath: '/metronome'
+      preLoaderRoute: typeof MetronomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tuner': {
+      id: '/tuner'
+      path: '/tuner'
+      fullPath: '/tuner'
+      preLoaderRoute: typeof TunerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/biblioteca': {
@@ -222,11 +222,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBibliotecaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+    '/_authenticated/subir': {
+      id: '/_authenticated/subir'
+      path: '/subir'
+      fullPath: '/subir'
+      preLoaderRoute: typeof AuthenticatedSubirRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/material/$id': {
+      id: '/_authenticated/material/$id'
+      path: '/material/$id'
+      fullPath: '/material/$id'
+      preLoaderRoute: typeof AuthenticatedMaterialIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/attachment/$id': {
@@ -235,13 +242,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/attachment/$id'
       preLoaderRoute: typeof ApiAttachmentIdRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/material/$id': {
-      id: '/_authenticated/material/$id'
-      path: '/material/$id'
-      fullPath: '/material/$id'
-      preLoaderRoute: typeof AuthenticatedMaterialIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
